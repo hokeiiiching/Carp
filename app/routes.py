@@ -131,6 +131,12 @@ def seed_database():
     """Seed database with sample data for development."""
     from datetime import datetime, timedelta
     
+    # Check if already seeded
+    existing = db.session.execute(db.select(User).filter_by(email='admin@carp.local')).scalar_one_or_none()
+    if existing:
+        print('Database already seeded. Use "flask main reset" to clear and reseed.')
+        return
+    
     # Create admin user
     admin = User(email='admin@carp.local', role='admin')
     admin.set_password('admin123')
@@ -175,3 +181,11 @@ def seed_database():
     
     db.session.commit()
     print('Database seeded successfully!')
+
+
+@main_bp.cli.command('reset')
+def reset_database():
+    """Clear all data and reseed the database."""
+    db.drop_all()
+    db.create_all()
+    print('Database reset. Run "flask main seed" to add sample data.')
