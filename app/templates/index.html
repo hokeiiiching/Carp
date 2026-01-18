@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_event_card %}
+
+{% block title %}Events - CARP{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">
+            <i class="bi bi-calendar2-event me-2"></i>Upcoming Events
+        </h1>
+        <p class="lead text-muted">Browse and register for community activities</p>
+    </div>
+</div>
+
+{% if events_data %}
+<div class="row">
+    {% for event_data in events_data %}
+    {{ render_event_card(event_data, linked_participant) }}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    No events are currently available. Check back soon!
+</div>
+{% endif %}
+{% endblock %}

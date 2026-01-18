@@ -1,0 +1,74 @@
+{% macro render_event_card(event_data, linked_participant) %}
+{% set event = event_data.event %}
+{% set count = event_data.count %}
+{% set is_full = event_data.is_full %}
+{% set capacity_percent = (count / event.max_capacity * 100) | int %}
+
+<div class="col-md-6 col-lg-4 mb-4">
+    <div class="card event-card h-100 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">{{ event.title }}</h5>
+            <p class="card-text text-muted">{{ event.description or 'No description available.' }}</p>
+
+            <div class="mb-3">
+                <small class="text-muted">
+                    <i class="bi bi-calendar me-1"></i>
+                    {{ event.start_time.strftime('%B %d, %Y at %I:%M %p') }}
+                </small>
+            </div>
+
+            <!-- Capacity Bar -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <small>Capacity</small>
+                    <small class="{% if is_full %}text-danger{% else %}text-success{% endif %}">
+                        {{ count }} / {{ event.max_capacity }}
+                    </small>
+                </div>
+                <div class="progress capacity-bar">
+                    <div class="progress-bar {% if is_full %}bg-danger{% elif capacity_percent > 75 %}bg-warning{% else %}bg-success{% endif %}"
+                        role="progressbar" style="width: {{ capacity_percent }}%" aria-valuenow="{{ count }}"
+                        aria-valuemin="0" aria-valuemax="{{ event.max_capacity }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-transparent">
+            {% if is_full %}
+            <button class="btn btn-secondary w-100" disabled>
+                <i class="bi bi-x-circle me-1"></i>Full
+            </button>
+            {% else %}
+            {% if linked_participant %}
+            <!-- Logged in user with linked participant -->
+            <form method="POST" action="{{ url_for('main.register', event_id=event.id) }}">
+                <p class="small text-muted mb-2">
+                    <i class="bi bi-person-check me-1"></i>
+                    Registering as <strong>{{ linked_participant.full_name }}</strong>
+                </p>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-check-circle me-1"></i>Register
+                </button>
+            </form>
+            {% else %}
+            <!-- Guest registration form -->
+            <form method="POST" action="{{ url_for('main.register', event_id=event.id) }}">
+                <div class="mb-2">
+                    <input type="text" class="form-control form-control-sm" name="nric"
+                        placeholder="NRIC (e.g., S1234567A)" required>
+                </div>
+                <div class="mb-2">
+                    <input type="text" class="form-control form-control-sm" name="name" placeholder="Full Name"
+                        required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-check-circle me-1"></i>Register
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
