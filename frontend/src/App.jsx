@@ -28,8 +28,9 @@ import { useState, useEffect } from 'react';
 import {
   User, Users, ClipboardList, LogOut, CheckCircle,
   AlertCircle, Calendar, Clock, MapPin, X,
-  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus
+  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus, QrCode, Smartphone
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import * as api from './api';
 import './index.css';
 
@@ -70,6 +71,13 @@ export default function App() {
 
   // Admin filter state
   const [selectedEventFilter, setSelectedEventFilter] = useState(null);
+
+  // QR Code and Walk-in state
+  const [qrCodeEvent, setQrCodeEvent] = useState(null); // Event to show QR code for
+  const [walkinEvent, setWalkinEvent] = useState(null); // Event for walk-in registration
+  const [walkinName, setWalkinName] = useState('');
+  const [walkinNRIC, setWalkinNRIC] = useState('');
+  const [walkinSuccess, setWalkinSuccess] = useState(false);
 
   // --- Effects ---
   useEffect(() => {
@@ -238,6 +246,64 @@ export default function App() {
     setView('dashboard');
     await loadRegistrations();
   };
+
+  // Generate QR code URL for an event
+  const getWalkinUrl = (eventId) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}?walkin=${eventId}`;
+  };
+
+  // Handle walk-in registration
+  const handleWalkinRegister = async () => {
+    if (!walkinName.trim() || !walkinNRIC.trim()) {
+      showFlash('Name and NRIC are required.', 'danger');
+      return;
+    }
+
+    try {
+      await api.registerForEvent(walkinEvent.id, {
+        name: walkinName.trim(),
+        nric: walkinNRIC.trim().toUpperCase()
+      });
+
+      // Refresh events
+      const eventsData = await api.getEvents();
+      setEvents(eventsData);
+
+      setWalkinSuccess(true);
+      showFlash(`Successfully registered ${walkinName} for ${walkinEvent.title}!`);
+    } catch (err) {
+      showFlash(err.message, 'danger');
+    }
+  };
+
+  // Reset walk-in form
+  const resetWalkin = () => {
+    setWalkinName('');
+    setWalkinNRIC('');
+    setWalkinSuccess(false);
+  };
+
+  // Close walk-in modal
+  const closeWalkin = () => {
+    setWalkinEvent(null);
+    resetWalkin();
+  };
+
+  // Check for walk-in URL parameter on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const walkinId = params.get('walkin');
+    if (walkinId && events.length > 0) {
+      const event = events.find(e => e.id === parseInt(walkinId));
+      if (event) {
+        setWalkinEvent(event);
+        // Clear the URL parameter
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [events]);
+
 
   if (loading) {
     return (
@@ -531,6 +597,110 @@ export default function App() {
         </div>
       )}
 
+      {/* QR Code Modal */}
+      {qrCodeEvent && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Event QR Code</h3>
+              <button onClick={() => setQrCodeEvent(null)} className="modal-close">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-content" style={{ textAlign: 'center' }}>
+              <div className="qr-event-info">
+                <h4>{qrCodeEvent.title}</h4>
+                <p>{qrCodeEvent.date} • {qrCodeEvent.venue}</p>
+              </div>
+
+              <div className="qr-code-container">
+                <QRCodeSVG
+                  value={getWalkinUrl(qrCodeEvent.id)}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+
+              <p className="qr-instructions">
+                <Smartphone size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                Scan to open walk-in registration
+              </p>
+
+              <div className="qr-url">
+                <code>{getWalkinUrl(qrCodeEvent.id)}</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Walk-in Registration Modal */}
+      {walkinEvent && (
+        <div className="modal-overlay">
+          <div className="modal walkin-modal">
+            <div className="modal-header walkin-header">
+              <div>
+                <h3>Walk-in Registration</h3>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Quick sign-up for attendees</p>
+              </div>
+              <button onClick={closeWalkin} className="modal-close">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-content">
+              <div className="walkin-event-banner">
+                <Calendar size={20} />
+                <div>
+                  <h4>{walkinEvent.title}</h4>
+                  <p>{walkinEvent.date} • {walkinEvent.venue}</p>
+                </div>
+              </div>
+
+              {walkinSuccess ? (
+                <div className="walkin-success">
+                  <CheckCircle size={48} />
+                  <h4>Registration Complete!</h4>
+                  <p>{walkinName} has been registered.</p>
+                  <button onClick={resetWalkin} className="form-btn primary" style={{ marginTop: '1rem' }}>
+                    Register Another
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="walkin-label">Full Name</label>
+                    <input
+                      value={walkinName}
+                      onChange={e => setWalkinName(e.target.value)}
+                      type="text"
+                      placeholder="Enter participant's name"
+                      className="form-input"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="walkin-label">NRIC</label>
+                    <input
+                      value={walkinNRIC}
+                      onChange={e => setWalkinNRIC(e.target.value)}
+                      type="text"
+                      placeholder="S1234567A"
+                      className="form-input uppercase"
+                    />
+                  </div>
+                  <button onClick={handleWalkinRegister} className="form-btn primary">
+                    <UserPlus size={18} style={{ marginRight: '0.5rem' }} />
+                    Register Walk-in
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="main">
         {view === 'catalog' && (
@@ -683,6 +853,27 @@ export default function App() {
                 </select>
               </div>
             </header>
+
+            {/* QR Codes Section */}
+            <div className="qr-cards-section">
+              <h4 className="qr-section-title">
+                <QrCode size={18} />
+                Walk-in QR Codes
+              </h4>
+              <div className="qr-cards-grid">
+                {events.slice(0, 6).map(event => (
+                  <button
+                    key={event.id}
+                    className="qr-card"
+                    onClick={() => setQrCodeEvent(event)}
+                  >
+                    <QrCode size={24} />
+                    <span className="qr-card-title">{event.title}</span>
+                    <span className="qr-card-date">{event.date}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="table-container">
               <div style={{ overflowX: 'auto' }}>
