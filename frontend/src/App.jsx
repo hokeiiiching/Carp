@@ -53,6 +53,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [myRegistrations, setMyRegistrations] = useState([]); // Event IDs user is registered for
 
   // UI state
   const [flash, setFlash] = useState(null);
@@ -88,8 +89,19 @@ export default function App() {
   useEffect(() => {
     if (currentUser?.role === 'caregiver' || currentUser?.role === 'senior') {
       loadSeniors();
+      loadMyRegistrations();
     }
   }, [currentUser]);
+
+  // Load user's own registrations to track already-registered state
+  const loadMyRegistrations = async () => {
+    try {
+      const data = await api.getMyRegistrations();
+      setMyRegistrations(data);
+    } catch (err) {
+      console.error('Failed to load my registrations:', err);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -229,9 +241,14 @@ export default function App() {
       const seniorId = currentUser ? selectedSeniorId : null;
       await api.registerForEvent(event.id, guestData, seniorId);
 
-      // Refresh events
+      // Refresh events and user's registrations
       const eventsData = await api.getEvents();
       setEvents(eventsData);
+
+      // Reload my registrations to update button states
+      if (currentUser) {
+        await loadMyRegistrations();
+      }
 
       showFlash(`Successfully registered for ${event.title}!`);
       setSelectedEvent(null);
@@ -791,6 +808,7 @@ export default function App() {
                 {events.map(event => {
                   const isFull = event.signups >= event.max_capacity;
                   const spotsLeft = event.max_capacity - event.signups;
+                  const isRegistered = currentUser && myRegistrations.includes(event.id);
                   return (
                     <div key={event.id} className={`event-card ${isFull ? 'full' : ''}`}>
                       <div className="event-header">
@@ -811,13 +829,20 @@ export default function App() {
 
                       <p className="event-description">{event.description}</p>
 
-                      <button
-                        disabled={isFull}
-                        onClick={() => setSelectedEvent(event)}
-                        className={`event-btn ${isFull ? 'disabled' : 'primary'}`}
-                      >
-                        {isFull ? 'Registration Full' : 'Register Now'}
-                      </button>
+                      {isRegistered ? (
+                        <button className="event-btn registered" disabled>
+                          <CheckCircle size={18} style={{ marginRight: '0.5rem' }} />
+                          Already Registered
+                        </button>
+                      ) : (
+                        <button
+                          disabled={isFull}
+                          onClick={() => setSelectedEvent(event)}
+                          className={`event-btn ${isFull ? 'disabled' : 'primary'}`}
+                        >
+                          {isFull ? 'Registration Full' : 'Register Now'}
+                        </button>
+                      )}
                     </div>
                   );
                 })}

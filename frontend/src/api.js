@@ -84,6 +84,15 @@ export async function registerForEvent(eventId, guestData = null, seniorId = nul
     });
 }
 
+/**
+ * Get event IDs that the current user is registered for.
+ * 
+ * @returns {Promise<Array<number>>} Array of event IDs the user is registered for
+ */
+export async function getMyRegistrations() {
+    return apiFetch('/my-registrations');
+}
+
 // --- Auth APIs ---
 
 /**

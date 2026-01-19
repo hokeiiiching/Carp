@@ -162,6 +162,31 @@ def register_event(event_id: int):
         return jsonify({'error': message}), 400
 
 
+@api_bp.route('/my-registrations', methods=['GET'])
+@login_required
+def get_my_registrations():
+    """
+    Get event IDs that the current user's participants are registered for.
+    
+    Returns list of event IDs for quick lookup in frontend.
+    """
+    from app.models import Registration
+    
+    # Get all participants linked to this user
+    participants = get_participants_for_user(current_user.id)
+    participant_ids = [p.id for p in participants]
+    
+    if not participant_ids:
+        return jsonify([])
+    
+    # Get all registrations for these participants
+    registrations = db.session.execute(
+        db.select(Registration.event_id).filter(Registration.participant_id.in_(participant_ids))
+    ).scalars().all()
+    
+    return jsonify(list(set(registrations)))
+
+
 # --- Auth Endpoints ---
 
 @api_bp.route('/auth/me', methods=['GET'])

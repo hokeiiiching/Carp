@@ -560,6 +560,16 @@ body {
   cursor: not-allowed;
 }
 
+.event-btn.registered {
+  background: #f0fdf4;
+  color: #16a34a;
+  cursor: default;
+  border: 2px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
