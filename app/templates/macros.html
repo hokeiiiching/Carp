@@ -1,3 +1,17 @@
+{#
+  Event Card Macro
+  ================
+  Renders a responsive event card with registration form.
+  
+  Parameters:
+    - event_data (dict): Contains 'event' (Event model), 'count' (int), 'is_full' (bool)
+    - linked_participant (Participant|None): If logged in, the user's linked participant profile
+  
+  Behavior:
+    - Full events: Shows disabled "Full" button
+    - Logged-in users with linked participant: One-click registration
+    - Guests: Shows NRIC + Name form for guest registration
+#}
 {% macro render_event_card(event_data, linked_participant) %}
 {% set event = event_data.event %}
 {% set count = event_data.count %}

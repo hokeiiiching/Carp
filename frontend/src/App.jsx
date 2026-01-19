@@ -1,32 +1,84 @@
+/**
+ * CARP Frontend - Main Application Component
+ * 
+ * A single-page application for the Community Activity Registration Portal.
+ * Provides event browsing, user authentication, and admin functionality.
+ * 
+ * @fileoverview Main App component managing all application state and views.
+ * 
+ * Views:
+ *   - 'catalog': Public event listing and registration
+ *   - 'auth': Login and account registration forms
+ *   - 'dashboard': Admin-only registration management
+ * 
+ * State Structure:
+ *   - view: Current active view ('catalog' | 'auth' | 'dashboard')
+ *   - authMode: Auth form mode ('login' | 'register')
+ *   - userRole: Selected role during registration ('caregiver' | 'admin')
+ *   - currentUser: Authenticated user object or null
+ *   - events: Array of available events from backend
+ *   - registrations: Array of registrations (admin only)
+ *   - flash: Flash message object { message, type } or null
+ *   - selectedEvent: Event being registered for (shows modal) or null
+ *   - loading: Initial data loading state
+ * 
+ * @module App
+ */
 import { useState, useEffect } from 'react';
 import {
   User, Users, ClipboardList, LogOut, CheckCircle,
   AlertCircle, Calendar, Clock, MapPin, X,
-  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint
+  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus
 } from 'lucide-react';
 import * as api from './api';
 import './index.css';
 
+/**
+ * Main application component.
+ * 
+ * Handles all routing, authentication, and event registration logic.
+ * Uses session-based authentication via cookies for API requests.
+ * 
+ * @returns {JSX.Element} The rendered application
+ */
 export default function App() {
   // --- State ---
+  // View management
   const [view, setView] = useState('catalog'); // catalog, dashboard, auth
   const [authMode, setAuthMode] = useState('login'); // login, register
   const [userRole, setUserRole] = useState('caregiver');
+
+  // Data state
   const [currentUser, setCurrentUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+
+  // UI state
   const [flash, setFlash] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Form states
+  // Guest registration form state
   const [guestName, setGuestName] = useState('');
   const [guestNRIC, setGuestNRIC] = useState('');
+
+  // Seniors management state (for caregivers)
+  const [seniors, setSeniors] = useState([]);
+  const [selectedSeniorId, setSelectedSeniorId] = useState(null);
+  const [newSeniorName, setNewSeniorName] = useState('');
+  const [newSeniorNRIC, setNewSeniorNRIC] = useState('');
 
   // --- Effects ---
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Load seniors when caregiver logs in
+  useEffect(() => {
+    if (currentUser?.role === 'caregiver') {
+      loadSeniors();
+    }
+  }, [currentUser]);
 
   const loadInitialData = async () => {
     try {
@@ -49,6 +101,50 @@ export default function App() {
       setRegistrations(data);
     } catch (err) {
       showFlash('Failed to load registrations', 'danger');
+    }
+  };
+
+  const loadSeniors = async () => {
+    try {
+      const data = await api.getSeniors();
+      setSeniors(data);
+      // Auto-select first senior if available
+      if (data.length > 0 && !selectedSeniorId) {
+        setSelectedSeniorId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load seniors:', err);
+    }
+  };
+
+  const openSeniors = async () => {
+    setView('seniors');
+    await loadSeniors();
+  };
+
+  const handleAddSenior = async () => {
+    if (!newSeniorName.trim() || !newSeniorNRIC.trim()) {
+      showFlash('Name and NRIC are required.', 'danger');
+      return;
+    }
+    try {
+      const result = await api.addSenior(newSeniorNRIC, newSeniorName);
+      showFlash(result.message);
+      setNewSeniorName('');
+      setNewSeniorNRIC('');
+      await loadSeniors();
+    } catch (err) {
+      showFlash(err.message, 'danger');
+    }
+  };
+
+  const handleRemoveSenior = async (seniorId) => {
+    try {
+      const result = await api.removeSenior(seniorId);
+      showFlash(result.message);
+      await loadSeniors();
+    } catch (err) {
+      showFlash(err.message, 'danger');
     }
   };
 
@@ -112,7 +208,9 @@ export default function App() {
         nric: guestNRIC
       };
 
-      await api.registerForEvent(event.id, guestData);
+      // For caregivers, pass the selected senior ID
+      const seniorId = currentUser ? selectedSeniorId : null;
+      await api.registerForEvent(event.id, guestData, seniorId);
 
       // Refresh events
       const eventsData = await api.getEvents();
@@ -158,6 +256,15 @@ export default function App() {
           >
             Catalog
           </button>
+
+          {currentUser?.role === 'caregiver' && (
+            <button
+              onClick={openSeniors}
+              className={`nav-link ${view === 'seniors' ? 'active' : ''}`}
+            >
+              My Seniors
+            </button>
+          )}
 
           {currentUser?.role === 'admin' && (
             <button
@@ -352,13 +459,36 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ color: '#475569', fontWeight: 500, marginBottom: '1.5rem' }}>
-                    You are registering as <b>{currentUser.name || currentUser.email}</b>
-                  </p>
-                  <button onClick={handleRegister} className="form-btn primary">
-                    Complete Registration
-                  </button>
+                <div>
+                  {seniors.length === 0 ? (
+                    <div className="guest-warning">
+                      <AlertCircle size={20} />
+                      <p>
+                        No seniors linked to your account. <button onClick={() => { setSelectedEvent(null); openSeniors(); }}>Add a senior</button> first.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem' }}>
+                        Select Senior to Register
+                      </label>
+                      <select
+                        value={selectedSeniorId || ''}
+                        onChange={e => setSelectedSeniorId(Number(e.target.value))}
+                        className="form-input"
+                        style={{ marginBottom: '1.5rem' }}
+                      >
+                        {seniors.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} ({s.nric})
+                          </option>
+                        ))}
+                      </select>
+                      <button onClick={handleRegister} className="form-btn primary">
+                        Complete Registration
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -475,6 +605,71 @@ export default function App() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {view === 'seniors' && currentUser?.role === 'caregiver' && (
+          <div>
+            <header className="header">
+              <div>
+                <h2>My Seniors</h2>
+                <p>Manage seniors linked to your account for event registration.</p>
+              </div>
+            </header>
+
+            {/* Add Senior Form */}
+            <div className="seniors-form">
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b' }}>
+                <UserPlus size={18} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                Link a Senior
+              </h3>
+              <div className="seniors-form-row">
+                <input
+                  type="text"
+                  value={newSeniorName}
+                  onChange={e => setNewSeniorName(e.target.value)}
+                  placeholder="Senior's Full Name"
+                  className="form-input"
+                />
+                <input
+                  type="text"
+                  value={newSeniorNRIC}
+                  onChange={e => setNewSeniorNRIC(e.target.value)}
+                  placeholder="NRIC (e.g. S1234567A)"
+                  className="form-input uppercase"
+                />
+                <button onClick={handleAddSenior} className="form-btn primary">
+                  Add Senior
+                </button>
+              </div>
+            </div>
+
+            {/* Seniors List */}
+            {seniors.length === 0 ? (
+              <div className="empty-state">
+                <Users size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                <h3>No seniors linked yet</h3>
+                <p>Add a senior above to register them for events.</p>
+              </div>
+            ) : (
+              <div className="seniors-grid">
+                {seniors.map(senior => (
+                  <div key={senior.id} className="senior-card">
+                    <div className="senior-info">
+                      <div className="senior-name">{senior.name}</div>
+                      <div className="senior-nric">{senior.nric}</div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveSenior(senior.id)}
+                      className="senior-remove"
+                      title="Remove senior"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>

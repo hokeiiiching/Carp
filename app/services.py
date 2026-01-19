@@ -158,3 +158,91 @@ def get_participant_for_user(user_id: int) -> Optional[Participant]:
     return db.session.execute(
         db.select(Participant).filter_by(user_id=user_id)
     ).scalar_one_or_none()
+
+
+def get_participants_for_user(user_id: int) -> list[Participant]:
+    """
+    Get all participants (seniors) linked to a caregiver.
+    
+    Args:
+        user_id: The caregiver's user ID
+    
+    Returns:
+        List of Participant objects linked to this user
+    """
+    return db.session.execute(
+        db.select(Participant).filter_by(user_id=user_id).order_by(Participant.full_name)
+    ).scalars().all()
+
+
+def link_participant_to_user(nric: str, name: str, user_id: int) -> tuple[bool, str, Optional[Participant]]:
+    """
+    Link a senior (participant) to a caregiver's account.
+    
+    If the participant already exists (by NRIC), links them to this user.
+    If they're already linked to another user, returns an error.
+    
+    Args:
+        nric: Senior's NRIC
+        name: Senior's full name
+        user_id: Caregiver's user ID to link to
+    
+    Returns:
+        Tuple of (success, message, participant or None)
+    """
+    nric_clean = nric.strip().upper()
+    
+    # Check if participant already exists
+    participant = db.session.execute(
+        db.select(Participant).filter_by(nric=nric_clean)
+    ).scalar_one_or_none()
+    
+    if participant:
+        # Already linked to this user
+        if participant.user_id == user_id:
+            return False, "This senior is already linked to your account.", None
+        # Linked to another user
+        if participant.user_id is not None:
+            return False, "This senior is already linked to another caregiver.", None
+        # Unlinked - link to this user
+        participant.user_id = user_id
+        db.session.commit()
+        return True, f"Linked existing senior: {participant.full_name}", participant
+    
+    # Create new participant
+    participant = Participant(
+        nric=nric_clean,
+        full_name=name,
+        user_id=user_id
+    )
+    db.session.add(participant)
+    db.session.commit()
+    return True, f"Added new senior: {name}", participant
+
+
+def unlink_participant_from_user(participant_id: int, user_id: int) -> tuple[bool, str]:
+    """
+    Unlink a senior from a caregiver's account.
+    
+    Only the caregiver who owns the link can unlink.
+    The participant record remains for event history.
+    
+    Args:
+        participant_id: The participant to unlink
+        user_id: The caregiver's user ID (for authorization)
+    
+    Returns:
+        Tuple of (success, message)
+    """
+    participant = db.session.get(Participant, participant_id)
+    
+    if not participant:
+        return False, "Senior not found."
+    
+    if participant.user_id != user_id:
+        return False, "You are not authorized to unlink this senior."
+    
+    participant.user_id = None
+    db.session.commit()
+    return True, f"Unlinked {participant.full_name} from your account."
+

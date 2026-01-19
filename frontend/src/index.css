@@ -812,3 +812,91 @@ body {
     grid-column: span 1;
   }
 }
+
+/* Seniors Page Styles */
+.seniors-form {
+  background: white;
+  border-radius: 2rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.seniors-form-row {
+  display: grid;
+  gap: 1rem;
+  align-items: end;
+}
+
+@media (min-width: 768px) {
+  .seniors-form-row {
+    grid-template-columns: 1fr 1fr auto;
+  }
+}
+
+.seniors-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .seniors-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .seniors-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.senior-card {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.senior-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+}
+
+.senior-info {
+  flex: 1;
+}
+
+.senior-name {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.senior-nric {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.senior-remove {
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.senior-remove:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}

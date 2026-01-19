@@ -9,7 +9,10 @@ from app.services import (
     register_for_event,
     get_all_events_with_counts,
     get_all_registrations,
-    get_participant_for_user
+    get_participant_for_user,
+    get_participants_for_user,
+    link_participant_to_user,
+    unlink_participant_from_user
 )
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -18,7 +21,18 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 # --- Helper Functions ---
 
 def event_to_dict(event, count: int) -> dict:
-    """Serialize Event model to dictionary."""
+    """
+    Serialize an Event model instance to a dictionary for API responses.
+    
+    Args:
+        event: Event model instance to serialize
+        count: Current number of registrations for this event
+    
+    Returns:
+        Dictionary containing event data formatted for frontend consumption:
+        - id, title, description, max_capacity, signups
+        - date (YYYY-MM-DD), time (HH:MM AM/PM), venue
+    """
     return {
         'id': event.id,
         'title': event.title,
@@ -27,12 +41,23 @@ def event_to_dict(event, count: int) -> dict:
         'signups': count,
         'date': event.start_time.strftime('%Y-%m-%d') if event.start_time else None,
         'time': event.start_time.strftime('%I:%M %p') if event.start_time else None,
-        'venue': 'Community Center'  # Could add venue field to Event model later
+        'venue': 'Community Center'  # TODO: Add venue field to Event model
     }
 
 
 def user_to_dict(user) -> dict:
-    """Serialize User model to dictionary."""
+    """
+    Serialize a User model instance to a dictionary for API responses.
+    
+    Includes linked participant data if available (name and NRIC).
+    Falls back to email username if no participant is linked.
+    
+    Args:
+        user: User model instance to serialize
+    
+    Returns:
+        Dictionary containing: id, email, role, name, nric (if available)
+    """
     participant = get_participant_for_user(user.id)
     return {
         'id': user.id,
@@ -44,7 +69,17 @@ def user_to_dict(user) -> dict:
 
 
 def registration_to_dict(reg) -> dict:
-    """Serialize Registration model to dictionary."""
+    """
+    Serialize a Registration model instance to a dictionary for API responses.
+    
+    Flattens participant data into the response for admin dashboard display.
+    
+    Args:
+        reg: Registration model instance to serialize
+    
+    Returns:
+        Dictionary containing: id, event_id, name, nric, source, timestamp (ISO format)
+    """
     return {
         'id': reg.id,
         'event_id': reg.event_id,
@@ -52,6 +87,23 @@ def registration_to_dict(reg) -> dict:
         'nric': reg.participant.nric,
         'source': reg.source,
         'timestamp': reg.timestamp.isoformat() if reg.timestamp else None
+    }
+
+
+def participant_to_dict(participant) -> dict:
+    """
+    Serialize a Participant (senior) model to dictionary for API responses.
+    
+    Args:
+        participant: Participant model instance
+    
+    Returns:
+        Dictionary containing: id, nric, name
+    """
+    return {
+        'id': participant.id,
+        'nric': participant.nric,
+        'name': participant.full_name
     }
 
 
@@ -70,15 +122,30 @@ def get_events():
 
 @api_bp.route('/events/<int:event_id>/register', methods=['POST'])
 def register_event(event_id: int):
-    """Register a participant for an event."""
+    """
+    Register a participant for an event.
+    
+    For caregivers: Can specify senior_id to register a specific linked senior.
+    For guests: Must provide nric and name in request body.
+    """
+    data = request.get_json() or {}
+    
     if current_user.is_authenticated:
-        # Use linked participant for logged-in users
-        participant = get_participant_for_user(current_user.id)
-        if not participant:
-            return jsonify({'error': 'No participant profile linked to your account.'}), 400
+        # Check if specific senior is selected
+        senior_id = data.get('senior_id')
+        
+        if senior_id:
+            # Verify senior is linked to this user
+            participant = db.session.get(Participant, senior_id)
+            if not participant or participant.user_id != current_user.id:
+                return jsonify({'error': 'Invalid senior selection.'}), 400
+        else:
+            # Fall back to first linked participant
+            participant = get_participant_for_user(current_user.id)
+            if not participant:
+                return jsonify({'error': 'No senior linked to your account. Please add a senior first.'}), 400
     else:
         # Guest registration
-        data = request.get_json() or {}
         nric = data.get('nric', '').strip()
         name = data.get('name', '').strip()
         
@@ -189,3 +256,60 @@ def get_registrations():
     registrations = get_all_registrations(event_filter)
     
     return jsonify([registration_to_dict(r) for r in registrations])
+
+
+# --- Seniors (Caregiver) Endpoints ---
+
+@api_bp.route('/seniors', methods=['GET'])
+@login_required
+def get_seniors():
+    """
+    Get all seniors linked to the current caregiver.
+    
+    Returns list of participant objects linked to this user.
+    """
+    seniors = get_participants_for_user(current_user.id)
+    return jsonify([participant_to_dict(s) for s in seniors])
+
+
+@api_bp.route('/seniors', methods=['POST'])
+@login_required
+def add_senior():
+    """
+    Link a new senior to the caregiver's account.
+    
+    Request body: { nric: string, name: string }
+    """
+    data = request.get_json() or {}
+    nric = data.get('nric', '').strip()
+    name = data.get('name', '').strip()
+    
+    if not nric or not name:
+        return jsonify({'error': 'NRIC and Name are required.'}), 400
+    
+    success, message, participant = link_participant_to_user(nric, name, current_user.id)
+    
+    if success:
+        return jsonify({
+            'message': message,
+            'senior': participant_to_dict(participant)
+        }), 201
+    else:
+        return jsonify({'error': message}), 400
+
+
+@api_bp.route('/seniors/<int:senior_id>', methods=['DELETE'])
+@login_required
+def remove_senior(senior_id: int):
+    """
+    Unlink a senior from the caregiver's account.
+    
+    The participant record is preserved for event history.
+    """
+    success, message = unlink_participant_from_user(senior_id, current_user.id)
+    
+    if success:
+        return jsonify({'message': message}), 200
+    else:
+        return jsonify({'error': message}), 400
+
