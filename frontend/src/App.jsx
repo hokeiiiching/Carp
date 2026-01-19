@@ -252,12 +252,10 @@ export default function App() {
       {/* Navigation */}
       <nav className="nav">
         <div className="nav-logo" onClick={() => setView('catalog')}>
-          <div className="nav-logo-icon">
-            <ClipboardList size={20} />
-          </div>
+          <img src="/logo.png" alt="CARP Logo" className="nav-logo-image" />
           <div>
             <h1>CARP</h1>
-            <span className="nav-logo-tagline">Community Activity Registration</span>
+            <span className="nav-logo-tagline">Community Activities & Resources</span>
           </div>
         </div>
 
