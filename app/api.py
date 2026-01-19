@@ -175,19 +175,24 @@ def get_current_user():
 @api_bp.route('/auth/login', methods=['POST'])
 def login():
     """Authenticate user."""
-    data = request.get_json() or {}
-    email = data.get('email', '').strip()
-    password = data.get('password', '')
-    
-    user = db.session.execute(
-        db.select(User).filter_by(email=email)
-    ).scalar_one_or_none()
-    
-    if user and user.check_password(password):
-        login_user(user)
-        return jsonify(user_to_dict(user))
-    
-    return jsonify({'error': 'Invalid email or password.'}), 401
+    try:
+        data = request.get_json() or {}
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        user = db.session.execute(
+            db.select(User).filter_by(email=email)
+        ).scalar_one_or_none()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            return jsonify(user_to_dict(user))
+        
+        return jsonify({'error': 'Invalid email or password.'}), 401
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        return jsonify({'error': f'Login failed: {str(e)}', 'details': error_details}), 500
 
 
 @api_bp.route('/auth/logout', methods=['POST'])
