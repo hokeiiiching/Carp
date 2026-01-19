@@ -255,7 +255,10 @@ export default function App() {
           <div className="nav-logo-icon">
             <ClipboardList size={20} />
           </div>
-          <h1>ActivityPortal</h1>
+          <div>
+            <h1>CARP</h1>
+            <span className="nav-logo-tagline">Community Activity Registration</span>
+          </div>
         </div>
 
         <div className="nav-links">
@@ -534,10 +537,79 @@ export default function App() {
       <main className="main">
         {view === 'catalog' && (
           <div>
-            <header className="header">
+            {/* Hero Section - Only show for guests or first visit */}
+            {!currentUser && (
+              <section className="hero">
+                <div className="hero-content">
+                  <div className="hero-badge">Community Activity Registration Platform</div>
+                  <h1 className="hero-title">
+                    Welcome to <span className="hero-highlight">CARP</span>
+                  </h1>
+                  <p className="hero-subtitle">
+                    Your one-stop platform for discovering and registering for community activities,
+                    workshops, and social gatherings designed for seniors and their caregivers.
+                  </p>
+
+                  <div className="hero-features">
+                    <div className="hero-feature">
+                      <div className="hero-feature-icon">
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <h4>Easy Registration</h4>
+                        <p>Browse and sign up for events in just a few clicks</p>
+                      </div>
+                    </div>
+                    <div className="hero-feature">
+                      <div className="hero-feature-icon">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <h4>Family Friendly</h4>
+                        <p>Caregivers can register their loved ones remotely</p>
+                      </div>
+                    </div>
+                    <div className="hero-feature">
+                      <div className="hero-feature-icon">
+                        <Heart size={20} />
+                      </div>
+                      <div>
+                        <h4>Community First</h4>
+                        <p>Stay connected with meaningful activities</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hero-actions">
+                    <button onClick={() => setView('auth')} className="hero-btn primary">
+                      Get Started <ArrowRight size={18} />
+                    </button>
+                    <button onClick={() => document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' })} className="hero-btn secondary">
+                      Browse Events
+                    </button>
+                  </div>
+                </div>
+                <div className="hero-stats">
+                  <div className="hero-stat">
+                    <span className="hero-stat-number">{events.length}</span>
+                    <span className="hero-stat-label">Active Events</span>
+                  </div>
+                  <div className="hero-stat">
+                    <span className="hero-stat-number">{events.reduce((sum, e) => sum + e.signups, 0)}</span>
+                    <span className="hero-stat-label">Registrations</span>
+                  </div>
+                  <div className="hero-stat">
+                    <span className="hero-stat-number">{events.filter(e => e.signups < e.max_capacity).length}</span>
+                    <span className="hero-stat-label">Open Spots</span>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            <header id="events-section" className="header">
               <div>
-                <h2>Active Catalog</h2>
-                <p>Discover upcoming workshops, sessions, and social gatherings.</p>
+                <h2>{currentUser ? 'Active Catalog' : 'Upcoming Events'}</h2>
+                <p>Discover workshops, sessions, and social gatherings in your community.</p>
               </div>
             </header>
 
