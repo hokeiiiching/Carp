@@ -148,6 +148,7 @@ def get_participant_for_user(user_id: int) -> Optional[Participant]:
     Get the primary participant associated with a user.
     
     For MVP, returns the first participant linked to the user.
+    Uses .first() to handle cases with multiple linked participants.
     
     Args:
         user_id: The user ID to find participant for
@@ -156,8 +157,8 @@ def get_participant_for_user(user_id: int) -> Optional[Participant]:
         Participant object or None
     """
     return db.session.execute(
-        db.select(Participant).filter_by(user_id=user_id)
-    ).scalar_one_or_none()
+        db.select(Participant).filter_by(user_id=user_id).order_by(Participant.id)
+    ).scalars().first()
 
 
 def get_participants_for_user(user_id: int) -> list[Participant]:
