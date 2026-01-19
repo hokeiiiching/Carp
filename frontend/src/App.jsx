@@ -28,7 +28,7 @@ import { useState, useEffect } from 'react';
 import {
   User, Users, ClipboardList, LogOut, CheckCircle,
   AlertCircle, Calendar, Clock, MapPin, X,
-  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus, QrCode, Smartphone
+  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus, QrCode, Smartphone, Download
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as api from './api';
@@ -851,6 +851,14 @@ export default function App() {
                     </option>
                   ))}
                 </select>
+                <a
+                  href={`/api/registrations/export${selectedEventFilter ? `?event_id=${selectedEventFilter}` : ''}`}
+                  className="export-btn"
+                  download
+                >
+                  <Download size={16} />
+                  Export CSV
+                </a>
               </div>
             </header>
 

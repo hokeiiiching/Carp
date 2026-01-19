@@ -263,6 +263,67 @@ def get_registrations():
     return jsonify([registration_to_dict(r) for r in registrations])
 
 
+@api_bp.route('/registrations/export', methods=['GET'])
+@login_required
+def export_registrations():
+    """
+    Export registrations to CSV format (admin only).
+    
+    Query params:
+        event_id: Optional event ID to filter by
+    
+    Returns:
+        CSV file download with columns: Name, NRIC, Event, Date, Time, Venue, Source, Registered At
+    """
+    if not current_user.is_admin():
+        return jsonify({'error': 'Access denied.'}), 403
+    
+    import csv
+    from io import StringIO
+    from flask import Response
+    from app.models import Event
+    
+    event_filter = request.args.get('event_id', type=int)
+    registrations = get_all_registrations(event_filter)
+    
+    # Create CSV in memory
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['Name', 'NRIC', 'Event', 'Date', 'Time', 'Venue', 'Source', 'Registered At'])
+    
+    # Write data rows
+    for reg in registrations:
+        event = db.session.get(Event, reg.event_id)
+        writer.writerow([
+            reg.participant.full_name,
+            reg.participant.nric,
+            event.title if event else 'Unknown',
+            event.start_time.strftime('%Y-%m-%d') if event else '',
+            event.start_time.strftime('%I:%M %p') if event else '',
+            'Activity Centre',  # Default venue
+            reg.source,
+            reg.timestamp.strftime('%Y-%m-%d %H:%M')
+        ])
+    
+    # Create response with CSV
+    output.seek(0)
+    
+    # Generate filename
+    if event_filter:
+        event = db.session.get(Event, event_filter)
+        filename = f"registrations_{event.title.replace(' ', '_') if event else event_filter}.csv"
+    else:
+        filename = "all_registrations.csv"
+    
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+
 # --- Seniors (Caregiver) Endpoints ---
 
 @api_bp.route('/seniors', methods=['GET'])
