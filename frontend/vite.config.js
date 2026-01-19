@@ -2,9 +2,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  server: {
+  // Build output for Vercel
+  build: {
+    outDir: 'dist',
+  },
+  // Proxy API requests to Flask backend in development only
+  server: mode === 'development' ? {
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
@@ -12,5 +17,5 @@ export default defineConfig({
         secure: false
       }
     }
-  }
-})
+  } : undefined
+}))

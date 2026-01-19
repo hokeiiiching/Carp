@@ -29,8 +29,9 @@ def create_app(config_name: str = 'default') -> Flask:
     db.init_app(app)
     login_manager.init_app(app)
     
-    # Enable CORS for React frontend in development
-    CORS(app, supports_credentials=True, origins=['http://localhost:5173'])
+    # Enable CORS - allows all origins in production since frontend and API share domain
+    # In development, allows localhost:5173 for Vite dev server
+    CORS(app, supports_credentials=True)
     
     # Register blueprints
     from app.routes import main_bp
