@@ -306,10 +306,9 @@ def export_registrations():
     import csv
     from io import StringIO
     from flask import Response
-    from app.models import Event
     
     event_filter = request.args.get('event_id', type=int)
-    registrations = get_all_registrations(event_filter)
+    registrations = get_all_registrations(event_filter)  # Uses eager loading
     
     # Create CSV in memory
     output = StringIO()
@@ -318,9 +317,9 @@ def export_registrations():
     # Write header
     writer.writerow(['Name', 'NRIC', 'Event', 'Date', 'Time', 'Venue', 'Source', 'Registered At'])
     
-    # Write data rows
+    # Write data rows (using preloaded event/participant data)
     for reg in registrations:
-        event = db.session.get(Event, reg.event_id)
+        event = reg.event  # Already loaded via joinedload
         writer.writerow([
             reg.participant.full_name,
             reg.participant.nric,

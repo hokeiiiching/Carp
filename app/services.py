@@ -3,6 +3,7 @@ from typing import Optional
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app import db
 from app.models import Participant, Event, Registration
@@ -108,39 +109,60 @@ def get_all_events_with_counts() -> list[dict]:
     """
     Get all events with their current registration counts.
     
+    Uses a single optimized query with LEFT JOIN and GROUP BY
+    instead of N+1 queries for better performance.
+    
     Returns:
         List of dicts containing event info and registration count
     """
-    events = db.session.execute(db.select(Event)).scalars().all()
-    result = []
+    # Single query: get all events with their registration counts
+    query = (
+        db.select(
+            Event,
+            func.count(Registration.id).label('reg_count')
+        )
+        .outerjoin(Registration, Event.id == Registration.event_id)
+        .group_by(Event.id)
+    )
     
-    for event in events:
-        count = get_event_registration_count(event.id)
-        result.append({
+    results = db.session.execute(query).all()
+    
+    return [
+        {
             'event': event,
             'count': count,
             'is_full': count >= event.max_capacity
-        })
-    
-    return result
+        }
+        for event, count in results
+    ]
 
 
 def get_all_registrations(event_id: Optional[int] = None) -> list[Registration]:
     """
     Get all registrations, optionally filtered by event.
     
+    Uses eager loading to avoid N+1 queries when accessing
+    participant and event data.
+    
     Args:
         event_id: Optional event ID to filter by
     
     Returns:
-        List of Registration objects
+        List of Registration objects with participant/event preloaded
     """
-    query = db.select(Registration).order_by(Registration.timestamp.desc())
+    query = (
+        db.select(Registration)
+        .options(
+            joinedload(Registration.participant),
+            joinedload(Registration.event)
+        )
+        .order_by(Registration.timestamp.desc())
+    )
     
     if event_id:
         query = query.filter_by(event_id=event_id)
     
-    return db.session.execute(query).scalars().all()
+    return db.session.execute(query).scalars().unique().all()
 
 
 def get_participant_for_user(user_id: int) -> Optional[Participant]:
