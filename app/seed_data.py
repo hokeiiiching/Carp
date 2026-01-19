@@ -299,6 +299,9 @@ def seed_database():
     Returns:
         Dictionary with summary of seeded data
     """
+    # Apply any necessary schema migrations first
+    migrate_schema()
+    
     # Clear existing data
     clear_database()
     
