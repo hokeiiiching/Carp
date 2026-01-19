@@ -313,3 +313,53 @@ def remove_senior(senior_id: int):
     else:
         return jsonify({'error': message}), 400
 
+
+# --- Database Seed Endpoint (Protected) ---
+
+import os
+
+@api_bp.route('/seed', methods=['POST'])
+def seed_database():
+    """
+    Seed the database with demo data.
+    
+    Protected by SEED_SECRET environment variable.
+    
+    Request body: { "secret": "your-seed-secret" }
+    
+    To use:
+    1. Set SEED_SECRET environment variable in Vercel
+    2. POST to /api/seed with { "secret": "your-secret-value" }
+    
+    This will CLEAR all existing data and populate with demo data.
+    """
+    data = request.get_json() or {}
+    provided_secret = data.get('secret', '')
+    
+    # Get the seed secret from environment
+    seed_secret = os.environ.get('SEED_SECRET', '')
+    
+    # Validate secret
+    if not seed_secret:
+        return jsonify({
+            'error': 'SEED_SECRET not configured. Set it in Vercel environment variables.'
+        }), 500
+    
+    if provided_secret != seed_secret:
+        return jsonify({'error': 'Invalid secret.'}), 403
+    
+    try:
+        from app.seed_data import seed_database as do_seed
+        summary = do_seed()
+        
+        return jsonify({
+            'message': 'Database seeded successfully!',
+            'summary': summary
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': f'Seeding failed: {str(e)}'
+        }), 500
+
