@@ -68,14 +68,17 @@ export default function App() {
   const [newSeniorName, setNewSeniorName] = useState('');
   const [newSeniorNRIC, setNewSeniorNRIC] = useState('');
 
+  // Admin filter state
+  const [selectedEventFilter, setSelectedEventFilter] = useState(null);
+
   // --- Effects ---
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  // Load seniors when caregiver logs in
+  // Load seniors when caregiver logs in, or self for seniors
   useEffect(() => {
-    if (currentUser?.role === 'caregiver') {
+    if (currentUser?.role === 'caregiver' || currentUser?.role === 'senior') {
       loadSeniors();
     }
   }, [currentUser]);
@@ -95,13 +98,19 @@ export default function App() {
     }
   };
 
-  const loadRegistrations = async () => {
+  const loadRegistrations = async (eventId = null) => {
     try {
-      const data = await api.getRegistrations();
+      const data = await api.getRegistrations(eventId);
       setRegistrations(data);
     } catch (err) {
       showFlash('Failed to load registrations', 'danger');
     }
+  };
+
+  const handleEventFilterChange = async (eventId) => {
+    const newFilter = eventId ? Number(eventId) : null;
+    setSelectedEventFilter(newFilter);
+    await loadRegistrations(newFilter);
   };
 
   const loadSeniors = async () => {
@@ -333,6 +342,7 @@ export default function App() {
                 <div className="role-selector">
                   {[
                     { id: 'caregiver', icon: Heart, label: 'Caregiver' },
+                    { id: 'senior', icon: Users, label: 'Senior' },
                     { id: 'admin', icon: Shield, label: 'Staff' }
                   ].map(role => (
                     <button
@@ -371,7 +381,7 @@ export default function App() {
                 </div>
               </div>
 
-              {authMode === 'register' && userRole !== 'admin' && (
+              {authMode === 'register' && (userRole === 'caregiver' || userRole === 'senior') && (
                 <>
                   <div className="form-input-wrapper">
                     <Fingerprint className="form-input-icon" size={18} />
@@ -458,7 +468,31 @@ export default function App() {
                     Confirm Guest Registration
                   </button>
                 </div>
+              ) : currentUser?.role === 'senior' ? (
+                // Seniors register themselves directly
+                <div>
+                  {seniors.length === 0 ? (
+                    <div className="guest-warning">
+                      <AlertCircle size={20} />
+                      <p>
+                        Your profile is not set up. Please contact support.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="modal-event-info" style={{ background: '#f0fdf4', marginBottom: '1.5rem' }}>
+                        <p style={{ fontWeight: 700, color: '#16a34a', marginBottom: '0.25rem' }}>Registering as:</p>
+                        <p style={{ fontWeight: 900, color: '#15803d', fontSize: '1.125rem' }}>{seniors[0]?.name}</p>
+                        <p style={{ fontWeight: 600, color: '#22c55e', fontFamily: 'monospace', fontSize: '0.75rem' }}>{seniors[0]?.nric}</p>
+                      </div>
+                      <button onClick={handleRegister} className="form-btn primary">
+                        Complete Registration
+                      </button>
+                    </>
+                  )}
+                </div>
               ) : (
+                // Caregivers select from their linked seniors
                 <div>
                   {seniors.length === 0 ? (
                     <div className="guest-warning">
@@ -558,6 +592,25 @@ export default function App() {
               <div>
                 <h2>Consolidated Roster</h2>
                 <p>Admin Panel • Central Attendance Management</p>
+              </div>
+              <div className="filter-container">
+                <label htmlFor="eventFilter" style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginRight: '0.5rem' }}>
+                  Filter by Event:
+                </label>
+                <select
+                  id="eventFilter"
+                  value={selectedEventFilter || ''}
+                  onChange={(e) => handleEventFilterChange(e.target.value)}
+                  className="form-input"
+                  style={{ width: 'auto', minWidth: '200px' }}
+                >
+                  <option value="">All Events</option>
+                  {events.map(event => (
+                    <option key={event.id} value={event.id}>
+                      {event.title} ({event.date})
+                    </option>
+                  ))}
+                </select>
               </div>
             </header>
 
