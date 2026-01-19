@@ -19,6 +19,26 @@ def clear_database():
     db.session.commit()
 
 
+def migrate_schema():
+    """
+    Apply any necessary schema migrations.
+    
+    This handles cases where the database was created with older column sizes.
+    """
+    from sqlalchemy import text
+    
+    # Alter password_hash column to accommodate scrypt hashes (~162 chars)
+    # This is idempotent - PostgreSQL allows altering to the same size
+    try:
+        db.session.execute(text(
+            'ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(256)'
+        ))
+        db.session.commit()
+    except Exception:
+        # Column might already be correct size, or different DB engine
+        db.session.rollback()
+
+
 def create_users():
     """Create demo user accounts."""
     users_data = [
