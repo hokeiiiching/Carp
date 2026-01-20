@@ -28,7 +28,7 @@ import { useState, useEffect } from 'react';
 import {
   User, Users, ClipboardList, LogOut, CheckCircle,
   AlertCircle, Calendar, Clock, MapPin, X,
-  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus, QrCode, Smartphone, Download
+  ArrowRight, Heart, Shield, Mail, Lock, Fingerprint, Trash2, UserPlus, QrCode, Smartphone, Download, Search, XCircle
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as api from './api';
@@ -79,6 +79,9 @@ export default function App() {
   const [walkinName, setWalkinName] = useState('');
   const [walkinNRIC, setWalkinNRIC] = useState('');
   const [walkinSuccess, setWalkinSuccess] = useState(false);
+
+  // Event search state
+  const [eventSearch, setEventSearch] = useState('');
 
   // --- Effects ---
   useEffect(() => {
@@ -263,6 +266,23 @@ export default function App() {
     setView('dashboard');
     await loadRegistrations();
   };
+
+  // Handle unregistration from an event
+  const handleUnregister = async (event, seniorId = null) => {
+    try {
+      await api.unregisterFromEvent(event.id, seniorId);
+
+      // Refresh events and registrations
+      const eventsData = await api.getEvents();
+      setEvents(eventsData);
+      await loadMyRegistrations();
+
+      showFlash(`Successfully unregistered from ${event.title}`);
+    } catch (err) {
+      showFlash(err.message, 'danger');
+    }
+  };
+
 
   // Generate QR code URL for an event
   const getWalkinUrl = (eventId) => {
@@ -796,16 +816,37 @@ export default function App() {
                 <h2>{currentUser ? 'Active Catalog' : 'Upcoming Events'}</h2>
                 <p>Discover workshops, sessions, and social gatherings in your community.</p>
               </div>
+              <div className="search-container">
+                <Search size={18} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={eventSearch}
+                  onChange={(e) => setEventSearch(e.target.value)}
+                  className="search-input"
+                />
+                {eventSearch && (
+                  <button onClick={() => setEventSearch('')} className="search-clear">
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
             </header>
 
-            {events.length === 0 ? (
+            {events.filter(e =>
+              e.title.toLowerCase().includes(eventSearch.toLowerCase()) ||
+              e.description?.toLowerCase().includes(eventSearch.toLowerCase())
+            ).length === 0 ? (
               <div className="empty-state">
-                <h3>No events available</h3>
-                <p>Check back later for new activities!</p>
+                <h3>{eventSearch ? 'No matching events' : 'No events available'}</h3>
+                <p>{eventSearch ? 'Try a different search term.' : 'Check back later for new activities!'}</p>
               </div>
             ) : (
               <div className="events-grid">
-                {events.map(event => {
+                {events.filter(e =>
+                  e.title.toLowerCase().includes(eventSearch.toLowerCase()) ||
+                  e.description?.toLowerCase().includes(eventSearch.toLowerCase())
+                ).map(event => {
                   const isFull = event.signups >= event.max_capacity;
                   const spotsLeft = event.max_capacity - event.signups;
                   const isRegistered = currentUser && myRegistrations.includes(event.id);
@@ -830,9 +871,12 @@ export default function App() {
                       <p className="event-description">{event.description}</p>
 
                       {isRegistered ? (
-                        <button className="event-btn registered" disabled>
-                          <CheckCircle size={18} style={{ marginRight: '0.5rem' }} />
-                          Already Registered
+                        <button
+                          className="event-btn unregister"
+                          onClick={() => handleUnregister(event, selectedSeniorId)}
+                        >
+                          <XCircle size={18} style={{ marginRight: '0.5rem' }} />
+                          Unregister
                         </button>
                       ) : (
                         <button
@@ -1004,7 +1048,6 @@ export default function App() {
                   <div key={senior.id} className="senior-card">
                     <div className="senior-info">
                       <div className="senior-name">{senior.name}</div>
-                      <div className="senior-nric">{senior.nric}</div>
                     </div>
                     <button
                       onClick={() => handleRemoveSenior(senior.id)}

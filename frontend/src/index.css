@@ -213,6 +213,61 @@ body {
   padding-bottom: 5rem;
 }
 
+/* Search Bar */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 250px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 2.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: white;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear:hover {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 /* Hero Section */
 .hero {
   background: linear-gradient(135deg, #16a34a 0%, #059669 50%, #0d9488 100%);
@@ -560,14 +615,20 @@ body {
   cursor: not-allowed;
 }
 
-.event-btn.registered {
+.event-btn.unregister {
   background: #f0fdf4;
   color: #16a34a;
-  cursor: default;
   border: 2px solid #bbf7d0;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+}
+
+.event-btn.unregister:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
 }
 
 /* Modal */

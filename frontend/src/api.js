@@ -93,6 +93,21 @@ export async function getMyRegistrations() {
     return apiFetch('/my-registrations');
 }
 
+/**
+ * Unregister from an event.
+ * 
+ * @param {number} eventId - The event ID to unregister from
+ * @param {number|null} [seniorId=null] - For caregivers: specific senior ID to unregister
+ * @returns {Promise<Object>} Response with 'message' on success
+ */
+export async function unregisterFromEvent(eventId, seniorId = null) {
+    const body = seniorId ? { senior_id: seniorId } : {};
+    return apiFetch(`/events/${eventId}/unregister`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+}
+
 // --- Auth APIs ---
 
 /**

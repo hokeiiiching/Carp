@@ -162,6 +162,44 @@ def register_event(event_id: int):
         return jsonify({'error': message}), 400
 
 
+@api_bp.route('/events/<int:event_id>/unregister', methods=['POST'])
+@login_required
+def unregister_event(event_id: int):
+    """
+    Unregister a participant from an event.
+    
+    For caregivers: Can specify senior_id to unregister a specific senior.
+    For seniors: Unregisters themselves.
+    """
+    from app.models import Registration
+    
+    data = request.get_json() or {}
+    senior_id = data.get('senior_id')
+    
+    # Get the participant to unregister
+    if senior_id:
+        participant = db.session.get(Participant, senior_id)
+        if not participant or participant.user_id != current_user.id:
+            return jsonify({'error': 'Invalid senior selection.'}), 400
+    else:
+        participant = get_participant_for_user(current_user.id)
+        if not participant:
+            return jsonify({'error': 'No participant profile found.'}), 400
+    
+    # Find and delete the registration
+    registration = db.session.execute(
+        db.select(Registration).filter_by(event_id=event_id, participant_id=participant.id)
+    ).scalar_one_or_none()
+    
+    if not registration:
+        return jsonify({'error': 'Registration not found.'}), 404
+    
+    db.session.delete(registration)
+    db.session.commit()
+    
+    return jsonify({'message': 'Successfully unregistered from event.'}), 200
+
+
 @api_bp.route('/my-registrations', methods=['GET'])
 @login_required
 def get_my_registrations():
