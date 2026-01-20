@@ -257,25 +257,29 @@ def create_events():
 def create_registrations(events, participants):
     """Create realistic registration patterns."""
     registration_patterns = [
-        (0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], ['online']*10 + ['walkin']*5),
-        (1, [0, 2, 4, 6, 8, 10, 12, 14, 15, 16, 17, 18], ['online']*8 + ['walkin']*4),
-        (2, [1, 3, 5, 7, 9, 11, 13, 15, 17, 19], ['online']*8 + ['walkin']*2),
-        (3, [0, 4, 8, 12, 16], ['online']*5),
-        (4, list(range(20)), ['online']*15 + ['walkin']*5),
-        (5, [1, 3, 5, 7, 9, 11, 13], ['online']*7),
-        (6, list(range(20)), ['online']*12 + ['walkin']*8),
-        (7, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19], ['online']*15 + ['walkin']*3),
-        (8, list(range(20)), ['online']*18 + ['walkin']*2),
-        (9, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18], ['online']*10),
-        (10, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17], ['online']*12 + ['walkin']*4),
-        (11, [1, 3, 5, 7, 9, 11, 15, 17], ['online']*8),
-        # Event 12: Singing Together - 20 unique participants
-        (12, list(range(20)), ['online']*15 + ['walkin']*5),
-        (13, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 17, 18], ['online']*12 + ['walkin']*3),
-        (14, list(range(20)), ['online']*15 + ['walkin']*5),
-        (15, [1, 3, 5, 7, 9], ['online']*5),
-        (16, [0, 2, 4], ['online']*3),
-        (17, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], ['online']*10),
+        # Event registrations: (event_idx, participant_indices, sources)
+        # Note: Participants 0,1 are linked to Alice - keeping them with fewer registrations for testing
+        # Past events (fully booked without Alice's seniors)
+        (0, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], ['online']*10 + ['walkin']*4),
+        (1, [2, 4, 6, 8, 10, 12, 14, 15, 16, 17, 18, 19], ['online']*8 + ['walkin']*4),
+        # Upcoming events - mix of registrations (mostly without Alice's seniors)
+        (2, [3, 5, 7, 9, 11, 13, 15, 17, 19], ['online']*7 + ['walkin']*2),
+        (3, [4, 8, 12, 16], ['online']*4),
+        (4, list(range(2, 20)), ['online']*13 + ['walkin']*5),
+        (5, [3, 5, 7, 9, 11, 13], ['online']*6),
+        (6, list(range(2, 20)), ['online']*10 + ['walkin']*8),
+        (7, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19], ['online']*13 + ['walkin']*3),
+        (8, list(range(2, 20)), ['online']*16 + ['walkin']*2),
+        (9, [2, 4, 6, 8, 10, 12, 14, 16, 18], ['online']*9),
+        (10, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17], ['online']*10 + ['walkin']*4),
+        (11, [3, 5, 7, 9, 11, 15, 17], ['online']*7),
+        # Alice's seniors (0,1) registered for just 2 events to demonstrate functionality
+        (12, [0, 1] + list(range(2, 18)), ['online']*14 + ['walkin']*4),
+        (13, [2, 3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 17, 18], ['online']*10 + ['walkin']*3),
+        (14, list(range(2, 18)), ['online']*13 + ['walkin']*3),
+        (15, [3, 5, 7, 9], ['online']*4),
+        (16, [2, 4], ['online']*2),
+        (17, [2, 3, 4, 5, 6, 7, 8, 9], ['online']*8),
     ]
     
     total_registrations = 0
