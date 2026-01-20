@@ -49,22 +49,19 @@ def user_to_dict(user) -> dict:
     """
     Serialize a User model instance to a dictionary for API responses.
     
-    Includes linked participant data if available (name and NRIC).
-    Falls back to email username if no participant is linked.
+    Returns user's own display_name if set, otherwise falls back to email username.
     
     Args:
         user: User model instance to serialize
     
     Returns:
-        Dictionary containing: id, email, role, name, nric (if available)
+        Dictionary containing: id, email, role, name
     """
-    participant = get_participant_for_user(user.id)
     return {
         'id': user.id,
         'email': user.email,
         'role': user.role,
-        'name': participant.full_name if participant else user.email.split('@')[0],
-        'nric': participant.nric if participant else None,
+        'name': user.display_name or user.email.split('@')[0],
     }
 
 
@@ -296,7 +293,7 @@ def register():
         return jsonify({'error': 'Invalid Caregiver Access Code.'}), 400
     
     # Create user
-    user = User(email=email, role=role)
+    user = User(email=email, role=role, display_name=name)
     user.set_password(password)
     db.session.add(user)
     db.session.flush()

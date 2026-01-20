@@ -54,63 +54,73 @@ def create_users():
         {
             "email": "admin@carp.sg",
             "password": "admin123",
-            "role": "admin"
+            "role": "admin",
+            "display_name": "Admin User"
         },
         {
             "email": "staff@carp.sg", 
             "password": "staff123",
-            "role": "admin"
+            "role": "admin",
+            "display_name": "Staff User"
         },
         # Caregiver accounts (family members who register seniors)
         {
             "email": "alice.tan@gmail.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Alice Tan"
         },
         {
             "email": "bob.lee@gmail.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Bob Lee"
         },
         {
             "email": "clara.wong@gmail.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Clara Wong"
         },
         {
             "email": "david.chen@hotmail.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "David Chen"
         },
         {
             "email": "emma.lim@yahoo.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Emma Lim"
         },
         {
             "email": "frank.ng@gmail.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Frank Ng"
         },
         {
             "email": "grace.koh@outlook.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Grace Koh"
         },
         {
             "email": "henry.goh@gmail.com",
             "password": "demo123",
-            "role": "caregiver"
+            "role": "caregiver",
+            "display_name": "Henry Goh"
         },
     ]
     
     users = []
     for data in users_data:
-        user = User(email=data["email"], role=data["role"])
+        user = User(email=data["email"], role=data["role"], display_name=data["display_name"])
         user.set_password(data["password"])
         db.session.add(user)
         users.append(user)
-        print(f"   ✓ Created user: {data['email']} ({data['role']})")
+        print(f"   ✓ Created user: {data['display_name']} ({data['email']}, {data['role']})")
     
     db.session.commit()
     return users

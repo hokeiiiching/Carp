@@ -21,6 +21,7 @@ class User(UserMixin, db.Model):
     email: str = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash: str = db.Column(db.String(256), nullable=False)  # scrypt hashes are ~162 chars
     role: str = db.Column(db.String(20), default='caregiver', nullable=False)
+    display_name: Optional[str] = db.Column(db.String(100), nullable=True)  # User's own name
     
     # Relationship to participants (one user can have multiple dependents)
     participants = db.relationship('Participant', back_populates='user', lazy='dynamic')
