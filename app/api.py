@@ -250,9 +250,10 @@ def login():
         
         return jsonify({'error': 'Invalid email or password.'}), 401
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        return jsonify({'error': f'Login failed: {str(e)}', 'details': error_details}), 500
+        # Log the error but show user-friendly message
+        import logging
+        logging.error(f"Login error: {str(e)}")
+        return jsonify({'error': 'Unable to log in. Please try again later.'}), 500
 
 
 @api_bp.route('/auth/logout', methods=['POST'])

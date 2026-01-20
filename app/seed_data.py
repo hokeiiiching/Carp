@@ -28,14 +28,21 @@ def migrate_schema():
     from sqlalchemy import text
     
     # Alter password_hash column to accommodate scrypt hashes (~162 chars)
-    # This is idempotent - PostgreSQL allows altering to the same size
     try:
         db.session.execute(text(
             'ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(256)'
         ))
         db.session.commit()
     except Exception:
-        # Column might already be correct size, or different DB engine
+        db.session.rollback()
+    
+    # Add display_name column if it doesn't exist
+    try:
+        db.session.execute(text(
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS display_name VARCHAR(100)'
+        ))
+        db.session.commit()
+    except Exception:
         db.session.rollback()
 
 
@@ -43,22 +50,22 @@ def create_users():
     """Create demo user accounts."""
     users_data = [
         # Admin accounts
-        {"email": "admin@carp.sg", "password": "admin123", "role": "admin"},
-        {"email": "staff@carp.sg", "password": "staff123", "role": "admin"},
+        {"email": "admin@carp.sg", "password": "admin123", "role": "admin", "display_name": "Admin User"},
+        {"email": "staff@carp.sg", "password": "staff123", "role": "admin", "display_name": "Staff User"},
         # Caregiver accounts
-        {"email": "alice.tan@gmail.com", "password": "demo123", "role": "caregiver"},
-        {"email": "bob.lee@gmail.com", "password": "demo123", "role": "caregiver"},
-        {"email": "clara.wong@gmail.com", "password": "demo123", "role": "caregiver"},
-        {"email": "david.chen@hotmail.com", "password": "demo123", "role": "caregiver"},
-        {"email": "emma.lim@yahoo.com", "password": "demo123", "role": "caregiver"},
-        {"email": "frank.ng@gmail.com", "password": "demo123", "role": "caregiver"},
-        {"email": "grace.koh@outlook.com", "password": "demo123", "role": "caregiver"},
-        {"email": "henry.goh@gmail.com", "password": "demo123", "role": "caregiver"},
+        {"email": "alice.tan@gmail.com", "password": "demo123", "role": "caregiver", "display_name": "Alice Tan"},
+        {"email": "bob.lee@gmail.com", "password": "demo123", "role": "caregiver", "display_name": "Bob Lee"},
+        {"email": "clara.wong@gmail.com", "password": "demo123", "role": "caregiver", "display_name": "Clara Wong"},
+        {"email": "david.chen@hotmail.com", "password": "demo123", "role": "caregiver", "display_name": "David Chen"},
+        {"email": "emma.lim@yahoo.com", "password": "demo123", "role": "caregiver", "display_name": "Emma Lim"},
+        {"email": "frank.ng@gmail.com", "password": "demo123", "role": "caregiver", "display_name": "Frank Ng"},
+        {"email": "grace.koh@outlook.com", "password": "demo123", "role": "caregiver", "display_name": "Grace Koh"},
+        {"email": "henry.goh@gmail.com", "password": "demo123", "role": "caregiver", "display_name": "Henry Goh"},
     ]
     
     users = []
     for data in users_data:
-        user = User(email=data["email"], role=data["role"])
+        user = User(email=data["email"], role=data["role"], display_name=data.get("display_name"))
         user.set_password(data["password"])
         db.session.add(user)
         users.append(user)
