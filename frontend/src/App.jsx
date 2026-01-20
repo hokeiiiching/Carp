@@ -234,30 +234,43 @@ export default function App() {
   const handleRegister = async () => {
     const event = selectedEvent;
 
+    // Close modal immediately for better UX
+    setSelectedEvent(null);
+    const savedGuestName = guestName;
+    const savedGuestNRIC = guestNRIC;
+    setGuestName('');
+    setGuestNRIC('');
+
+    // Optimistic update - immediately update UI
+    if (currentUser) {
+      setMyRegistrations(prev => [...prev, event.id]);
+    }
+    setEvents(prev => prev.map(e =>
+      e.id === event.id ? { ...e, signups: e.signups + 1 } : e
+    ));
+    showFlash(`Registered for ${event.title}!`);
+
     try {
       const guestData = currentUser ? null : {
-        name: guestName,
-        nric: guestNRIC
+        name: savedGuestName,
+        nric: savedGuestNRIC
       };
-
-      // For caregivers, pass the selected senior ID
       const seniorId = currentUser ? selectedSeniorId : null;
       await api.registerForEvent(event.id, guestData, seniorId);
 
-      // Refresh events and user's registrations
-      const eventsData = await api.getEvents();
-      setEvents(eventsData);
-
-      // Reload my registrations to update button states
+      // Background refresh for accurate data
+      api.getEvents().then(setEvents);
       if (currentUser) {
-        await loadMyRegistrations();
+        api.getMyRegistrations().then(setMyRegistrations).catch(() => { });
       }
-
-      showFlash(`Successfully registered for ${event.title}!`);
-      setSelectedEvent(null);
-      setGuestName('');
-      setGuestNRIC('');
     } catch (err) {
+      // Rollback on error
+      if (currentUser) {
+        setMyRegistrations(prev => prev.filter(id => id !== event.id));
+      }
+      setEvents(prev => prev.map(e =>
+        e.id === event.id ? { ...e, signups: Math.max(0, e.signups - 1) } : e
+      ));
       showFlash(err.message, 'danger');
     }
   };
@@ -267,18 +280,26 @@ export default function App() {
     await loadRegistrations();
   };
 
-  // Handle unregistration from an event
+  // Handle unregistration from an event (optimistic update)
   const handleUnregister = async (event, seniorId = null) => {
+    // Optimistic update - immediately update UI
+    setMyRegistrations(prev => prev.filter(id => id !== event.id));
+    setEvents(prev => prev.map(e =>
+      e.id === event.id ? { ...e, signups: Math.max(0, e.signups - 1) } : e
+    ));
+    showFlash(`Unregistered from ${event.title}`);
+
     try {
       await api.unregisterFromEvent(event.id, seniorId);
-
-      // Refresh events and registrations
-      const eventsData = await api.getEvents();
-      setEvents(eventsData);
-      await loadMyRegistrations();
-
-      showFlash(`Successfully unregistered from ${event.title}`);
+      // Background refresh for accurate data
+      api.getEvents().then(setEvents);
+      api.getMyRegistrations().then(setMyRegistrations).catch(() => { });
     } catch (err) {
+      // Rollback on error
+      setMyRegistrations(prev => [...prev, event.id]);
+      setEvents(prev => prev.map(e =>
+        e.id === event.id ? { ...e, signups: e.signups + 1 } : e
+      ));
       showFlash(err.message, 'danger');
     }
   };
