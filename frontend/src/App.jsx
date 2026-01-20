@@ -233,6 +233,7 @@ export default function App() {
 
   const handleRegister = async () => {
     const event = selectedEvent;
+    if (!event) return;
 
     // Close modal immediately for better UX
     setSelectedEvent(null);
@@ -241,9 +242,12 @@ export default function App() {
     setGuestName('');
     setGuestNRIC('');
 
-    // Optimistic update - immediately update UI
+    // Optimistic update - immediately update UI for this ONE event
+    const previousRegistrations = [...myRegistrations];
+    const previousEvents = [...events];
+
     if (currentUser) {
-      setMyRegistrations(prev => [...prev, event.id]);
+      setMyRegistrations(prev => [...new Set([...prev, event.id])]);
     }
     setEvents(prev => prev.map(e =>
       e.id === event.id ? { ...e, signups: e.signups + 1 } : e
@@ -257,20 +261,11 @@ export default function App() {
       };
       const seniorId = currentUser ? selectedSeniorId : null;
       await api.registerForEvent(event.id, guestData, seniorId);
-
-      // Background refresh for accurate data
-      api.getEvents().then(setEvents);
-      if (currentUser) {
-        api.getMyRegistrations().then(setMyRegistrations).catch(() => { });
-      }
+      // Success - no need to refresh, optimistic update was correct
     } catch (err) {
-      // Rollback on error
-      if (currentUser) {
-        setMyRegistrations(prev => prev.filter(id => id !== event.id));
-      }
-      setEvents(prev => prev.map(e =>
-        e.id === event.id ? { ...e, signups: Math.max(0, e.signups - 1) } : e
-      ));
+      // Rollback to previous state on error
+      setMyRegistrations(previousRegistrations);
+      setEvents(previousEvents);
       showFlash(err.message, 'danger');
     }
   };
@@ -282,6 +277,10 @@ export default function App() {
 
   // Handle unregistration from an event (optimistic update)
   const handleUnregister = async (event, seniorId = null) => {
+    // Snapshot current state for rollback
+    const previousRegistrations = [...myRegistrations];
+    const previousEvents = [...events];
+
     // Optimistic update - immediately update UI
     setMyRegistrations(prev => prev.filter(id => id !== event.id));
     setEvents(prev => prev.map(e =>
@@ -291,15 +290,11 @@ export default function App() {
 
     try {
       await api.unregisterFromEvent(event.id, seniorId);
-      // Background refresh for accurate data
-      api.getEvents().then(setEvents);
-      api.getMyRegistrations().then(setMyRegistrations).catch(() => { });
+      // Success - no need to refresh, optimistic update was correct
     } catch (err) {
-      // Rollback on error
-      setMyRegistrations(prev => [...prev, event.id]);
-      setEvents(prev => prev.map(e =>
-        e.id === event.id ? { ...e, signups: e.signups + 1 } : e
-      ));
+      // Rollback to previous state on error
+      setMyRegistrations(previousRegistrations);
+      setEvents(previousEvents);
       showFlash(err.message, 'danger');
     }
   };
